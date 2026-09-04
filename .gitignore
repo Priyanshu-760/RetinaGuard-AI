@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.env
+venv/
+env/
+.vscode/
+.idea/
+.DS_Store
+test_fundus.png
+*.bak
