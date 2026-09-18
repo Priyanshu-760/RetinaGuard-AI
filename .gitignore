@@ -8,3 +8,5 @@ env/
 .DS_Store
 test_fundus.png
 *.bak
+node_modules/
+dist/
