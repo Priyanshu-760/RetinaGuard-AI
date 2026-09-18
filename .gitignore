@@ -1,12 +1,36 @@
+# Python
 __pycache__/
-*.pyc
-.env
+*.py[cod]
+.venv/
 venv/
 env/
-.vscode/
-.idea/
-.DS_Store
-test_fundus.png
-*.bak
+
+# Environment/secrets
+.env
+.env.*
+
+# Node
 node_modules/
+.next/
 dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python cache
+.pytest_cache/
+
+# Large ML/data files
+*.h5
+*.keras
+*.pth
+*.pt
+*.onnx
+*.pkl
+*.joblib
