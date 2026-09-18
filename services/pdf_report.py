@@ -1,285 +1,326 @@
+"""RetinaGuard clinical screening report (vector PDF, light clinical style).
+
+Presentation layer only: renders whatever the backend pipeline produced.
+No medical facts are invented here — every value comes from `analysis_data`
+or is explicitly marked as unavailable. Inference logic lives in app.py.
+"""
 import io
 import os
 import base64
-from PIL import Image
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, HRFlowable, KeepTogether
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
+    Image as RLImage, HRFlowable,
 )
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 
-def b64_to_rl_image(b64_str, width=1.8*inch, height=1.8*inch):
+ACCENT = colors.HexColor('#B42318')      # restrained clinical crimson
+ACCENT_SOFT = colors.HexColor('#FDECEA')
+INK = colors.HexColor('#101828')
+MUTED = colors.HexColor('#475467')
+LINE = colors.HexColor('#D0D5DD')
+PANEL = colors.HexColor('#F9FAFB')
+
+CLASS_LABELS = ["No DR", "Mild", "Moderate", "Severe", "Proliferative"]
+
+
+def b64_to_rl_image(b64_str, width=1.7 * inch, height=1.7 * inch):
     if not b64_str:
         return None
     try:
-        raw_bytes = base64.b64decode(b64_str)
-        buf = io.BytesIO(raw_bytes)
-        img = RLImage(buf, width=width, height=height)
-        return img
+        return RLImage(io.BytesIO(base64.b64decode(b64_str)), width=width, height=height)
     except Exception:
         return None
 
+
+def _footer(canvas, doc):
+    canvas.saveState()
+    canvas.setFont('Helvetica', 7.5)
+    canvas.setFillColor(MUTED)
+    canvas.drawString(36, 28, 'RetinaGuard · Screening support only — not a medical diagnosis.')
+    canvas.drawRightString(A4[0] - 36, 28, 'Page %d' % doc.page)
+    canvas.restoreState()
+
+
 def generate_pdf_report_bytes(analysis_data, original_img_path=None):
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        leftMargin=36,
-        rightMargin=36,
-        topMargin=36,
-        bottomMargin=36
-    )
+    data = analysis_data or {}
+    pred = data.get('prediction', {}) or {}
+    ref = data.get('referable', {}) or {}
+    quality = data.get('quality', {}) or {}
+    exp = data.get('explainability', {}) or {}
+    gradcam = data.get('gradcam', {}) or {}
+    structures = data.get('structures', {}) or {}
+    lesions = data.get('lesions', {}) or {}
+    model = data.get('model', {}) or {}
+    pre = data.get('preprocessing', {}) or {}
 
-    styles = getSampleStyleSheet()
-    
-    # Custom styles
-    title_style = ParagraphStyle(
-        'DocTitle',
-        parent=styles['Heading1'],
-        fontName='Helvetica-Bold',
-        fontSize=20,
-        leading=24,
-        textColor=colors.HexColor('#0F172A')
-    )
-    
-    subtitle_style = ParagraphStyle(
-        'DocSubTitle',
-        parent=styles['Normal'],
-        fontName='Helvetica',
-        fontSize=10,
-        leading=13,
-        textColor=colors.HexColor('#64748B')
-    )
-
-    h2_style = ParagraphStyle(
-        'SectionHeading',
-        parent=styles['Heading2'],
-        fontName='Helvetica-Bold',
-        fontSize=13,
-        leading=16,
-        textColor=colors.HexColor('#1E293B'),
-        spaceBefore=10,
-        spaceAfter=6
-    )
-
-    body_style = ParagraphStyle(
-        'BodyTextCustom',
-        parent=styles['Normal'],
-        fontName='Helvetica',
-        fontSize=9,
-        leading=12,
-        textColor=colors.HexColor('#334155')
-    )
-
-    body_bold = ParagraphStyle(
-        'BodyBoldCustom',
-        parent=styles['Normal'],
-        fontName='Helvetica-Bold',
-        fontSize=9,
-        leading=12,
-        textColor=colors.HexColor('#0F172A')
-    )
-
-    alert_style = ParagraphStyle(
-        'AlertText',
-        parent=styles['Normal'],
-        fontName='Helvetica-Bold',
-        fontSize=9,
-        leading=12,
-        textColor=colors.HexColor('#991B1B')
-    )
-
-    disclaimer_style = ParagraphStyle(
-        'DisclaimerText',
-        parent=styles['Normal'],
-        fontName='Helvetica-Oblique',
-        fontSize=8,
-        leading=11,
-        textColor=colors.HexColor('#475569')
-    )
-
-    story = []
-
-    # 1. Header Banner
-    story.append(Paragraph("RetinaGuard™ Clinical Telemedicine Screening Report", title_style))
-    story.append(Paragraph("AI-Assisted Retinal Image Analysis & Decision Support · Rural India PHC Workflow", subtitle_style))
-    story.append(Spacer(1, 8))
-    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.HexColor('#2563EB'), spaceAfter=12))
-
-    # Extract Data Fields
-    pred = analysis_data.get('prediction', {})
     grade = pred.get('grade', 'Unknown')
     class_idx = pred.get('class_index', 0)
-    conf = pred.get('confidence', 0.0) * 100.0
+    try:
+        class_idx = int(class_idx)
+    except Exception:
+        class_idx = 0
+    conf = float(pred.get('confidence', 0.0) or 0.0)
+    probs = list(pred.get('probabilities', []) or [])
+    while len(probs) < 5:
+        probs.append(0.0)
+    probs = [float(p or 0.0) for p in probs[:5]]
 
-    ref = analysis_data.get('referable', {})
-    referable_bool = ref.get('referable', False)
-    score_raw = ref.get('score_raw', 0.0)
-    score_cal = ref.get('score_calibrated', 0.0)
-    ref_thresh = ref.get('threshold', 0.40)
+    referable = ref.get('referable', None)
+    score_raw = ref.get('score_raw', None)
+    score_cal = ref.get('score_calibrated', None)
+    threshold = ref.get('threshold', 0.40)
 
-    quality = analysis_data.get('quality', {})
-    q_status = quality.get('status', 'unknown').upper()
-    q_score = quality.get('score', 0.0) * 100.0
-    q_action = quality.get('action', 'N/A')
-    flags = quality.get('flags', [])
+    q_status = str(quality.get('status', 'unknown'))
+    q_score = quality.get('score', None)
+    flags = quality.get('flags', []) or []
+    q_action = quality.get('action', '—')
 
-    exp = analysis_data.get('explainability', {})
-    case_id = exp.get('case_id', 'RG-99823')
-    elapsed = exp.get('elapsed_sec', 0.0)
+    case_id = exp.get('case_id', '—')
+    elapsed = exp.get('elapsed_sec', None)
 
-    # Status colors
-    ref_color = colors.HexColor('#DC2626') if referable_bool else colors.HexColor('#16A34A')
-    ref_text = "REFERABLE DR (LEVEL 2+) DETECTED" if referable_bool else "NON-REFERABLE (LEVEL <2)"
-
-    # 2. Case Summary Table
-    summary_data = [
-        [
-            Paragraph("<b>Case ID:</b> " + str(case_id), body_style),
-            Paragraph("<b>Quality Assessment:</b> " + q_status + f" ({q_score:.1f}%)", body_style),
-            Paragraph("<b>Processing Time:</b> " + f"{elapsed:.2f}s (<30s target)", body_style)
-        ],
-        [
-            Paragraph("<b>Predicted DR Grade:</b> <font color='#1E40AF'><b>" + str(grade) + "</b></font>", body_style),
-            Paragraph("<b>Model Confidence:</b> " + f"{conf:.1f}%", body_style),
-            Paragraph("<b>Referable Status:</b> <font color='" + ref_color.hexval() + "'><b>" + ref_text + "</b></font>", body_style)
-        ]
-    ]
-
-    summary_table = Table(summary_data, colWidths=[2.4*inch, 2.6*inch, 2.5*inch])
-    summary_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor('#F8FAFC')),
-        ('BOX', (0,0), (-1,-1), 1, colors.HexColor('#CBD5E1')),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
-        ('PADDING', (0,0), (-1,-1), 6),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-    ]))
-    story.append(summary_table)
-    story.append(Spacer(1, 10))
-
-    # 3. Diagnostic Findings & Calibration
-    story.append(Paragraph("1. DR Severity Classification & Calibrated Risk", h2_style))
-    
-    probs = pred.get('probabilities', [0.2, 0.2, 0.2, 0.2, 0.2])
-    prob_cols = ["No DR", "Mild", "Moderate", "Severe", "Proliferative"]
-    prob_row_headers = [Paragraph(f"<b>{c}</b>", body_style) for c in prob_cols]
-    prob_row_vals = [
-        Paragraph(f"<b>{probs[i]*100:.1f}%</b>" if i == class_idx else f"{probs[i]*100:.1f}%", 
-                  body_bold if i == class_idx else body_style) 
-        for i in range(5)
-    ]
-    
-    prob_table_data = [prob_row_headers, prob_row_vals]
-    prob_table = Table(prob_table_data, colWidths=[1.5*inch]*5)
-    
-    # Highlight predicted column
-    t_style = [
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor('#F1F5F9')),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#CBD5E1')),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('PADDING', (0,0), (-1,-1), 5),
-    ]
-    t_style.append(('BACKGROUND', (class_idx, 0), (class_idx, 1), colors.HexColor('#DBEAFE')))
-    prob_table.setStyle(TableStyle(t_style))
-    story.append(prob_table)
-    story.append(Spacer(1, 6))
-
-    # Calibration detail note
-    cal_info = (
-        f"<b>Referable Score Calibration (Messidor Gap Guard):</b> Raw score = {score_raw:.3f} | "
-        f"Calibrated (T={ref_thresh*1.62:.3f}) = {score_cal:.3f} | Decision Threshold t = {ref_thresh:.2f}. "
-        f"<i>Clinical criteria: Level 2+ requires referral for ophthalmologist examination.</i>"
+    # ---- interpretation + recommendation (strictly from backend values) ----
+    ref_word = ('referable' if referable is True
+                else 'non-referable' if referable is False
+                else 'not assessed')
+    interpretation = (
+        'The AI screening system classified the submitted retinal image as %s '
+        'with a model confidence of %.1f%%. '
+        'The screening assessment is %s. '
+        'Image quality was assessed as %s.'
+        % (grade, conf * 100.0, ref_word, q_status)
     )
-    story.append(Paragraph(cal_info, body_style))
-    story.append(Spacer(1, 10))
+    if q_status == 'ungradable':
+        recommendation = ('Repeat retinal image acquisition is recommended because '
+                          'the submitted image did not meet the system\'s quality criteria.')
+    elif referable is True:
+        recommendation = ('Referral for review by a qualified eye-care professional '
+                          'is recommended based on the screening result.')
+    elif referable is False:
+        recommendation = ('Routine clinical follow-up should be determined by the '
+                          'patient\'s healthcare provider. A non-referable screening '
+                          'result does not establish absence of disease.')
+    else:
+        recommendation = ('Clinical follow-up should be determined by the patient\'s '
+                          'healthcare provider.')
 
-    # 4. Visual Explainability & Retinal Structure Evidence
-    story.append(Paragraph("2. Retinal Structure & Explainability Evidence", h2_style))
+    # ---- document ----
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+                            leftMargin=40, rightMargin=40, topMargin=40, bottomMargin=48)
+    styles = getSampleStyleSheet()
+    title = ParagraphStyle('Title2', parent=styles['Heading1'], fontName='Helvetica-Bold',
+                           fontSize=19, leading=23, textColor=INK)
+    subtitle = ParagraphStyle('Sub2', parent=styles['Normal'], fontName='Helvetica',
+                              fontSize=9.5, leading=13, textColor=MUTED)
+    h2 = ParagraphStyle('H2', parent=styles['Heading2'], fontName='Helvetica-Bold',
+                        fontSize=12, leading=15, textColor=INK, spaceBefore=14, spaceAfter=6)
+    body = ParagraphStyle('Body2', parent=styles['Normal'], fontName='Helvetica',
+                          fontSize=9, leading=12.5, textColor=colors.HexColor('#344054'))
+    bold = ParagraphStyle('Bold2', parent=body, fontName='Helvetica-Bold', textColor=INK)
+    small = ParagraphStyle('Small2', parent=body, fontSize=8, leading=11, textColor=MUTED)
+    disclaim = ParagraphStyle('Disc2', parent=body, fontName='Helvetica-Oblique',
+                              fontSize=8, leading=11, textColor=MUTED)
 
-    # Build image flowables
-    orig_img_flowable = None
+    story = []
+    story.append(Paragraph('DIABETIC RETINOPATHY SCREENING REPORT', title))
+    story.append(Paragraph('AI-assisted retinal image screening · Decision support document', subtitle))
+    story.append(Spacer(1, 6))
+    story.append(HRFlowable(width='100%', thickness=2, color=ACCENT, spaceAfter=10))
+
+    def panel(rows, widths=None):
+        t = Table(rows, colWidths=widths, hAlign='LEFT')
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), PANEL),
+            ('BOX', (0, 0), (-1, -1), 0.8, LINE),
+            ('INNERGRID', (0, 0), (-1, -1), 0.4, LINE),
+            ('PADDING', (0, 0), (-1, -1), 7),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ]))
+        return t
+
+    def P(text, style=body):
+        return Paragraph(text, style)
+
+    # 1. Examination Summary
+    story.append(Paragraph('1. Examination Summary', h2))
+    story.append(panel([
+        [P('<b>Case ID:</b> ' + str(case_id)),
+         P('<b>Analysis time:</b> ' + ('%.2f s' % float(elapsed) if elapsed is not None else '—'))],
+        [P('<b>Model:</b> ' + str(model.get('name', 'B0_CLASSWEIGHTED_FINETUNED_224'))),
+         P('<b>Input:</b> ' + str(model.get('input_size', '224x224')) + ' · ' +
+           str(model.get('architecture', 'EfficientNetB0')))],
+    ], widths=[3.65 * inch, 3.65 * inch]))
+    story.append(Spacer(1, 4))
+    story.append(P('This report was generated by automated analysis of the submitted retinal '
+                   'fundus image. No patient history, symptoms, laboratory values, or prior '
+                   'examinations were available to, or used by, the system.', small))
+
+    # 2. AI Screening Result
+    story.append(Paragraph('2. AI Screening Result', h2))
+    story.append(panel([
+        [P('<b>Predicted grade:</b> <font color="#B42318"><b>' + str(grade) + '</b></font>'),
+         P('<b>Model confidence:</b> %.1f%%' % (conf * 100.0))],
+    ], widths=[3.65 * inch, 3.65 * inch]))
+    story.append(Spacer(1, 4))
+    story.append(P('Confidence reflects the strength of the model output for the predicted '
+                   'class. It is not a clinical probability of disease.', small))
+
+    # 3. Referable Screening Status
+    story.append(Paragraph('3. Referable Screening Status', h2))
+    ref_text = ('REFERABLE — review by an eye-care professional is advised'
+                if referable is True else
+                'NON-REFERABLE — routine follow-up per provider judgment'
+                if referable is False else 'NOT ASSESSED')
+    story.append(panel([
+        [P('<b>Status:</b> <b>' + ref_text + '</b>'),
+         P('<b>Referable score:</b> ' + ('%.3f' % float(score_raw) if score_raw is not None else '—') +
+           ' · <b>Threshold:</b> ≥ %.2f' % float(threshold))],
+    ], widths=[3.65 * inch, 3.65 * inch]))
+    if score_cal is not None:
+        story.append(Spacer(1, 4))
+        story.append(P('Calibrated display score: %.3f (calibration is display-only; '
+                       'the referral decision uses the uncalibrated score).' % float(score_cal), small))
+
+    # 4. Image Quality Assessment
+    story.append(Paragraph('4. Image Quality Assessment', h2))
+    q_rows = [
+        [P('<b>Status:</b> ' + q_status.upper()),
+         P('<b>Quality score:</b> ' + ('%.0f%%' % (float(q_score) * 100.0) if q_score is not None else '—'))],
+        [P('<b>Brightness:</b> %.2f' % float(quality.get('brightness', 0.0) or 0.0)),
+         P('<b>Contrast:</b> %.2f' % float(quality.get('contrast', 0.0) or 0.0))],
+        [P('<b>Field of view:</b> ' + ('%.0f%%' % (float(quality.get('fov_fraction', 0.0) or 0.0) * 100.0)
+           if quality.get('fov_fraction') is not None else '—')),
+         P('<b>Blur variance:</b> ' + ('%.1f' % float(quality.get('blur_variance', 0.0) or 0.0)
+           if quality.get('blur_variance') is not None else '—'))],
+        [P('<b>Image dimensions:</b> ' + ('%s × %s px' % (quality.get('width'), quality.get('height'))
+           if quality.get('width') and quality.get('height') else '—')),
+         P('<b>Black background:</b> ' + ('%.1f%%' % (float(quality.get('black_background_fraction', 0.0) or 0.0) * 100.0)
+           if quality.get('black_background_fraction') is not None else '—'))],
+        [P('<b>Quality flags:</b> ' + (', '.join(str(f).replace('_', ' ') for f in flags) if flags else 'None recorded')),
+         P('<b>System action:</b> ' + str(q_action))],
+    ]
+    story.append(panel(q_rows, widths=[3.65 * inch, 3.65 * inch]))
+    story.append(Spacer(1, 4))
+    story.append(P('Image-quality assessment is advisory. It evaluates technical suitability '
+                   'for automated analysis and is not a clinical validation of the image.', small))
+
+    # 5. Probability Distribution
+    story.append(Paragraph('5. AI Classification Probability Distribution', h2))
+    hdr = [P('<b>%s</b>' % c) for c in CLASS_LABELS]
+    vals = [P(('<b>%.1f%%</b>' % (probs[i] * 100.0)) if i == class_idx else ('%.1f%%' % (probs[i] * 100.0)),
+              bold if i == class_idx else body) for i in range(5)]
+    pt = Table([hdr, vals], colWidths=[1.46 * inch] * 5, hAlign='LEFT')
+    style_cmds = [('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#F2F4F7')),
+                  ('GRID', (0, 0), (-1, -1), 0.5, LINE),
+                  ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                  ('PADDING', (0, 0), (-1, -1), 6)]
+    if 0 <= class_idx < 5:
+        style_cmds.append(('BACKGROUND', (class_idx, 0), (class_idx, 1), ACCENT_SOFT))
+    pt.setStyle(TableStyle(style_cmds))
+    story.append(pt)
+    story.append(Spacer(1, 4))
+    story.append(P('Predicted class is highlighted. Class order is fixed: No DR, Mild, '
+                   'Moderate, Severe, Proliferative.', small))
+
+    # 6. Visual Evidence
+    story.append(Paragraph('6. Retinal Image / Visual Evidence', h2))
+    orig = None
     if original_img_path and os.path.exists(str(original_img_path)):
         try:
-            orig_img_flowable = RLImage(str(original_img_path), width=1.7*inch, height=1.7*inch)
+            orig = RLImage(str(original_img_path), width=1.7 * inch, height=1.7 * inch)
         except Exception:
-            orig_img_flowable = None
+            orig = None
+    hm = b64_to_rl_image(gradcam.get('heatmap_png_base64') or gradcam.get('overlay_png_base64'))
+    ves = b64_to_rl_image(structures.get('vessel_png_base64'))
+    les = b64_to_rl_image(lesions.get('exudate_png_base64'))
+    story.append(Table(
+        [[orig or P('Input fundus<br/>(unavailable)'),
+          hm or P('Grad-CAM<br/>(unavailable)'),
+          ves or P('Vessels<br/>(unavailable)'),
+          les or P('Exudates<br/>(unavailable)')],
+         [P('<b>Input fundus</b>'), P('<b>AI attention</b>'),
+          P('<b>Vessels</b>'), P('<b>Exudates</b>')]],
+        colWidths=[1.82 * inch] * 4, hAlign='LEFT',
+        style=TableStyle([('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                          ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                          ('GRID', (0, 0), (-1, -1), 0.5, LINE),
+                          ('BACKGROUND', (0, 1), (-1, 1), PANEL),
+                          ('PADDING', (0, 0), (-1, -1), 4)])))
+    story.append(Spacer(1, 4))
+    story.append(P('Only visualizations produced by the analysis pipeline are shown. Panels '
+                   'marked unavailable were not produced for this case; no image is substituted.', small))
 
-    hm_b64 = analysis_data.get('gradcam', {}).get('heatmap_png_base64') or analysis_data.get('gradcam', {}).get('overlay_png_base64')
-    ov_b64 = analysis_data.get('gradcam', {}).get('overlay_png_base64')
-    ves_b64 = analysis_data.get('structures', {}).get('vessel_png_base64')
-    les_b64 = analysis_data.get('lesions', {}).get('exudate_png_base64')
+    # 7. Explainability
+    story.append(Paragraph('7. Explainability', h2))
+    story.append(P('<b>Method:</b> %s · <b>Target layer:</b> %s'
+                   % (gradcam.get('method', 'Grad-CAM'),
+                      gradcam.get('target_layer', 'efficientnetb0/top_conv'))))
+    if gradcam.get('note'):
+        story.append(P(str(gradcam.get('note')), small))
+    corr = exp.get('lesion_grade_correlation')
+    if corr:
+        story.append(Spacer(1, 4))
+        story.append(P('<b>Lesion / grade correlation:</b> ' + str(corr)))
+    checklist = exp.get('validation_checklist_30s') or []
+    if checklist:
+        story.append(Spacer(1, 4))
+        story.append(P('<b>Validation checklist:</b>', bold))
+        for item in checklist:
+            story.append(P('☐&nbsp;&nbsp;' + str(item)))
+    story.append(Spacer(1, 4))
+    story.append(P('Explainability visualizations represent model attention and supporting '
+                   'image analysis. They are not standalone clinical evidence and do not '
+                   'confirm the presence or absence of any lesion.', small))
 
-    img_hm = b64_to_rl_image(hm_b64, width=1.7*inch, height=1.7*inch)
-    img_ov = b64_to_rl_image(ov_b64, width=1.7*inch, height=1.7*inch)
-    img_ves = b64_to_rl_image(ves_b64, width=1.7*inch, height=1.7*inch)
-    img_les = b64_to_rl_image(les_b64, width=1.7*inch, height=1.7*inch)
+    # 8. Technical Model Information
+    story.append(Paragraph('8. Technical Model Information', h2))
+    tech_rows = []
+    if model.get('name'):
+        tech_rows.append([P('<b>Model:</b> ' + str(model.get('name'))),
+                          P('<b>Architecture:</b> ' + str(model.get('architecture', '—')))])
+    if pre:
+        tech_rows.append([P('<b>Preprocessing:</b> crop thr %s · pad %s · %s · %s'
+                             % (pre.get('crop_threshold', '—'), pre.get('crop_padding', '—'),
+                                pre.get('resize', '—'), pre.get('normalization', '—'))),
+                          P('<b>Enhancement applied:</b> ' + ('Yes' if pre.get('enhancement_applied') else 'No'))])
+    vmethod = structures.get('vessel_method')
+    lmethod = lesions.get('lesion_method')
+    if vmethod or lmethod:
+        tech_rows.append([P('<b>Vessel method:</b> ' + str(vmethod or '—')),
+                          P('<b>Lesion method:</b> ' + str(lmethod or '—'))])
+    if tech_rows:
+        story.append(panel(tech_rows, widths=[3.65 * inch, 3.65 * inch]))
+    if structures.get('dataset') or lesions.get('dataset'):
+        story.append(Spacer(1, 4))
+        story.append(P('Segmentation sources: vessels — %s; lesions — %s. Classical-proxy '
+                       'outputs are approximations, not validated measurements.'
+                       % (structures.get('dataset', '—'), lesions.get('dataset', '—')), small))
 
-    img_cells = [
-        [
-            orig_img_flowable or Paragraph("Fundus Image", body_style),
-            img_hm or Paragraph("Grad-CAM Heatmap", body_style),
-            img_ves or Paragraph("Vessel Mask (DRIVE)", body_style),
-            img_les or Paragraph("Exudate Mask (IDRiD)", body_style),
-        ],
-        [
-            Paragraph("<b>Input Fundus</b>", body_style),
-            Paragraph("<b>Grad-CAM Attention</b>", body_style),
-            Paragraph("<b>Vessel Structure</b>", body_style),
-            Paragraph("<b>Exudate Lesions</b>", body_style),
-        ]
-    ]
+    # 9. Screening Interpretation
+    story.append(Paragraph('9. Screening Interpretation', h2))
+    story.append(P(interpretation))
 
-    img_table = Table(img_cells, colWidths=[1.87*inch]*4)
-    img_table.setStyle(TableStyle([
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor('#E2E8F0')),
-        ('BACKGROUND', (0,1), (-1,1), colors.HexColor('#F8FAFC')),
-        ('PADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(img_table)
-    story.append(Spacer(1, 10))
+    # 10. Recommended Next Step
+    story.append(Paragraph('10. Recommended Next Step', h2))
+    story.append(P(recommendation))
+    story.append(Spacer(1, 4))
+    story.append(P('No treatment is prescribed by this system. All decisions regarding '
+                   'referral urgency, follow-up intervals, and management remain with the '
+                   'responsible healthcare provider.', small))
 
-    # 5. Image Quality & Advisory Recapture Guidance
-    story.append(Paragraph("3. Image Quality Assessment & Recapture Guidance", h2_style))
-    q_flags_str = ", ".join(flags) if flags else "None (Optimal Image Quality)"
-    q_details = (
-        f"<b>Quality Status:</b> {q_status} | <b>Brightness:</b> {quality.get('brightness',0.0):.2f} | "
-        f"<b>Contrast:</b> {quality.get('contrast',0.0):.2f} | <b>Blur Variance:</b> {quality.get('blur_variance',0.0):.1f}<br/>"
-        f"<b>Detected Flags:</b> {q_flags_str}<br/>"
-        f"<b>Guidance Action:</b> <i>{q_action}</i>"
-    )
-    story.append(Paragraph(q_details, body_style))
-    story.append(Spacer(1, 10))
+    # 11. Safety Notice
+    story.append(Paragraph('11. Safety Notice', h2))
+    story.append(Paragraph(
+        '<b>SCREENING SUPPORT ONLY.</b> This document does not provide a medical diagnosis. '
+        'Results should be reviewed by a qualified healthcare professional. Image-quality '
+        'assessment is advisory and is not clinically validated.',
+        ParagraphStyle('SafetyBox', parent=body, fontName='Helvetica-Bold', fontSize=9,
+                       leading=12.5, textColor=colors.HexColor('#7A2E0E'),
+                       backColor=colors.HexColor('#FFF7ED'), borderPadding=8)))
 
-    # 6. 30-Second Ophthalmologist Validation Checklist
-    story.append(Paragraph("4. 30-Second Human-in-the-Loop Validation Checklist", h2_style))
-    checklist_items = [
-        "<b>[  ] Step 1:</b> Verify Fundus Image Quality & Field of View coverage.",
-        "<b>[  ] Step 2:</b> Confirm Optic Disc & Fovea landmark integrity.",
-        "<b>[  ] Step 3:</b> Inspect Grad-CAM attention heatmap correlation with microaneurysms/exudates.",
-        "<b>[  ] Step 4:</b> Review Referable DR status and confirm triage action.",
-        "<b>[  ] Step 5:</b> Sign off screening report or refer to tertiary eye hospital."
-    ]
-    for chk in checklist_items:
-        story.append(Paragraph(chk, body_style))
-        story.append(Spacer(1, 2))
-    
-    story.append(Spacer(1, 12))
-    story.append(HRFlowable(width="100%", thickness=0.8, color=colors.HexColor('#CBD5E1'), spaceAfter=8))
-
-    # 7. Medical Disclaimer
-    disclaimer_text = (
-        "<b>CLINICAL DISCLAIMER & REGULATORY NOTICE:</b><br/>"
-        "RetinaGuard™ is an AI-assisted telemedicine screening decision support system. "
-        "This automated report does <b>NOT</b> constitute a formal medical diagnosis. "
-        "All screening recommendations must be reviewed and validated by a registered ophthalmologist or medical officer before clinical intervention."
-    )
-    story.append(Paragraph(disclaimer_text, disclaimer_style))
-
-    # Build document
-    doc.build(story)
+    doc.build(story, onFirstPage=_footer, onLaterPages=_footer)
     buffer.seek(0)
     return buffer.getvalue()

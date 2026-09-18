@@ -878,6 +878,7 @@ def download_pdf_report():
         return jsonify({'success': False, 'error': 'Unsupported image format.'}), 400
 
     temp_path = None
+    t0 = time.time()
     try:
         with NamedTemporaryFile(suffix=extension, delete=False) as tf_:
             temp_path = Path(tf_.name)
@@ -901,6 +902,23 @@ def download_pdf_report():
         analysis_payload = {
             'prediction': prediction,
             'quality': quality,
+            'model': {
+                'name': 'B0_CLASSWEIGHTED_FINETUNED_224',
+                'architecture': 'EfficientNetB0',
+                'input_size': '224x224',
+                'classes': CLASS_NAMES,
+                'frozen': True,
+            },
+            'preprocessing': {
+                'rgb': True,
+                'crop_threshold': CROP_THRESHOLD,
+                'crop_padding': CROP_PADDING,
+                'resize': '224x224',
+                'normalization': '[0,1]',
+                'augmentation': False,
+                'enhancement_applied': False,
+                'enhancement': 'none (direct grading)',
+            },
             'referable': {
                 'referable': referable,
                 'score_raw': raw_score,
@@ -909,7 +927,24 @@ def download_pdf_report():
             },
             'explainability': {
                 'case_id': uuid.uuid4().hex[:10].upper(),
-                'elapsed_sec': 0.48,
+                'elapsed_sec': round(time.time() - t0, 2),
+                'lesion_grade_correlation': (
+                    'Referable score and 5-class grade agree. '
+                    if referable == (prediction['class_index'] >= 2)
+                    else 'Discordant: 5-class grade says '
+                    + prediction['grade']
+                    + ' but referable score says '
+                    + ('referable' if referable else 'non-referable')
+                    + '. Safety-first: referable overrides grade. Flag for human review. '
+                )
+                + 'Grad-CAM is attention only; vessel/exudate overlays are lesion evidence.',
+                'validation_checklist_30s': [
+                    '1. Quality: ' + quality['status'],
+                    '2. Grade: ' + prediction['grade'],
+                    '3. Referable L2+: ' + str(referable),
+                    '4. Heatmap + lesion overlays inspected',
+                    '5. Safety: screening only, needs professional review',
+                ],
             },
             'gradcam': {
                 'heatmap_png_base64': hm_b64,

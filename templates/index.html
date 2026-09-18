@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RetinaGuard — AI Retinal Screening Workspace</title>
-<meta name="description" content="RetinaGuard: AI-assisted diabetic retinopathy screening with automated image quality assessment and explainable analysis. Screening support only.">
+<title>RetinaGuard — Explainable AI Retinal Screening</title>
+<meta name="description" content="RetinaGuard: explainable AI screening for diabetic retinopathy. Image quality assessment, five-class classification and model explainability. Screening support only.">
 <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,187 +13,125 @@
 </head>
 <body>
 <a class="skip-link" href="#mainContent">Skip to main content</a>
-<div class="app-shell">
+<div class="app">
 
-  <!-- ============ SIDEBAR ============ -->
-  <aside class="sidebar" id="sidebar" aria-label="Primary navigation">
-    <div class="sidebar-brand">
-      <div class="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-      </div>
-      <div class="brand-text">
-        <span class="brand-name">RetinaGuard</span>
-        <span class="brand-sub">AI screening platform</span>
-      </div>
-      <button class="icon-btn sidebar-close" id="sidebarClose" aria-label="Close navigation">✕</button>
-    </div>
-
-    <nav class="sidebar-nav">
-      <p class="nav-group-label">Workspace</p>
-      <button class="nav-item is-active" data-view="overview" aria-current="page">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
-        <span>Overview</span>
-      </button>
-      <button class="nav-item" data-view="screening">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        <span>New Screening</span>
-      </button>
-      <button class="nav-item" data-view="history">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
-        <span>Screening History</span>
-        <span class="nav-count" id="navHistoryCount">0</span>
-      </button>
-
-      <p class="nav-group-label">Intelligence</p>
-      <button class="nav-item" data-view="insights">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 3 5-7"/></svg>
-        <span>AI Insights</span>
-      </button>
-      <button class="nav-item" data-view="simulink">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-        <span>Simulink Telemedicine</span>
-      </button>
-      <button class="nav-item" data-view="model">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9zM4 10h-2M4 14h-2M22 10h-2M22 14h-2M10 4V2M14 4V2M10 22v-2M14 22v-2"/></svg>
-        <span>Model Information</span>
-      </button>
-
-      <p class="nav-group-label">System</p>
-      <button class="nav-item" data-view="status">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-        <span>System Status</span>
-      </button>
-      <button class="nav-item" data-view="settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-        <span>Settings</span>
-      </button>
-    </nav>
-
-    <div class="sidebar-footer">
-      <div class="sys-pill" id="sidebarSysPill" role="status">
-        <span class="dot dot-live" id="sidebarDot"></span>
-        <span id="sidebarSysText">Checking system…</span>
-      </div>
-      <div class="model-chip">
-        <span class="mono">EfficientNetB0</span>
-        <span class="mono muted">B0_CLASSWEIGHTED_FINETUNED_224</span>
-      </div>
-    </div>
-  </aside>
-  <div class="sidebar-scrim" id="sidebarScrim"></div>
-
-  <!-- ============ MAIN COLUMN ============ -->
-  <div class="main-col">
-    <header class="topbar glass-sticky">
-      <div class="topbar-left">
-        <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open navigation">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        </button>
-        <div class="crumbs">
-          <span class="crumb-root">RetinaGuard</span>
-          <span class="crumb-sep" aria-hidden="true">/</span>
-          <span class="crumb-current" id="crumbCurrent">Overview</span>
-        </div>
-      </div>
-      <div class="topbar-right">
-        <span class="status-pill" id="topbarStatusPill" role="status">
-          <span class="dot dot-live" id="topbarDot"></span>
-          <span id="topbarStatusText">Online</span>
+  <!-- ============ NAVBAR ============ -->
+  <header class="nav">
+    <div class="nav-inner">
+      <button class="brand" data-goto="home" aria-label="RetinaGuard home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
         </span>
-        <button class="btn btn-primary btn-sm" data-goto="screening">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          <span>New Screening</span>
-        </button>
-      </div>
-    </header>
+        <span><span class="brand-name">RETINAGUARD</span><br><span class="brand-sub">AI RETINAL SCREENING</span></span>
+      </button>
+      <nav class="nav-links" id="navLinks" aria-label="Primary">
+        <button class="nav-link is-active" data-view="home">HOME</button>
+        <button class="nav-link" data-view="how">HOW IT WORKS</button>
+        <button class="nav-link" data-view="screening">SCREENING</button>
+        <button class="nav-link" data-view="about">ABOUT</button>
+        <span class="nav-cta"><button class="btn btn-primary btn-sm" data-goto="screening"><span>START SCREENING</span></button></span>
+      </nav>
+      <span class="sys-dot" role="status"><span class="dot" id="sysDot"></span><span id="sysText">CHECKING…</span></span>
+      <button class="nav-toggle" id="navToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+    </div>
+  </header>
 
-    <main class="workspace" id="mainContent" tabindex="-1">
+  <main id="mainContent" tabindex="-1">
+  <div class="wrap">
 
-      <!-- ======== OVERVIEW ======== -->
-      <section class="view is-visible" id="view-overview" aria-labelledby="overviewTitle">
-        <div class="page-head">
+    <!-- ============ HOME / LANDING ============ -->
+    <section class="view is-visible" id="view-home" aria-labelledby="homeTitle">
+      <div class="page">
+        <div class="hero">
           <div>
-            <h1 id="overviewTitle">Retinal Screening Workspace</h1>
-            <p class="page-sub">AI-assisted diabetic retinopathy screening with automated image quality assessment and explainable analysis.</p>
+            <span class="eyebrow">Explainable AI Retinal Screening</span>
+            <h1 class="hero-title" id="homeTitle">SEE THE RETINA.<br><span class="hot">UNDERSTAND THE RISK.</span></h1>
+            <p class="lead">Explainable AI screening for diabetic retinopathy. Analyze retinal fundus images, assess image quality, classify diabetic retinopathy severity, and surface model explainability information through a structured screening workflow.</p>
+            <div class="hero-cta">
+              <button class="btn btn-primary" data-goto="screening"><span>START SCREENING</span><span aria-hidden="true">→</span></button>
+              <button class="btn btn-secondary" data-goto="how"><span>HOW IT WORKS</span></button>
+            </div>
+            <div class="hero-proof">
+              <div><strong>EfficientNetB0</strong><span>Frozen classifier · 224×224</span></div>
+              <div><strong>5-class</strong><span>No DR → Proliferative</span></div>
+              <div><strong>Grad-CAM</strong><span>Attention visualization</span></div>
+            </div>
           </div>
-          <div class="page-head-actions">
-            <button class="btn btn-primary" data-goto="screening">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-              <span>New Screening</span>
-            </button>
-            <button class="btn btn-secondary" data-goto="model"><span>How it works</span></button>
+          <div class="retina-stage" role="img" aria-label="Stylized retinal imaging viewport with AI scan visualization. Decorative only, not a diagnostic image.">
+            <div class="orbit o1"></div><div class="orbit o2"></div><div class="orbit o3"></div>
+            <div class="retina-core"></div>
+            <div class="scanline" aria-hidden="true"></div>
+            <span class="tick t1">FUNDUS · <b>AI SCAN</b></span>
+            <span class="tick t2">224 × 224 · <b>RGB</b></span>
+            <span class="tick t3">Q<b>···</b></span>
+            <span class="tick t4">···<b>G</b></span>
           </div>
         </div>
 
-        <div class="safety-strip" role="note">
+        <div class="safety-strip safety" role="note">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          <p><strong>Screening support only.</strong> This result is not a medical diagnosis and requires review by a qualified healthcare professional.</p>
+          <p><strong>Screening support only.</strong> This system does not provide a medical diagnosis. Results should be reviewed by a qualified healthcare professional.</p>
         </div>
 
-        <div class="stat-grid">
-          <article class="card stat-card">
-            <div class="stat-top"><span class="stat-label">Session screenings</span><span class="stat-icon">◈</span></div>
-            <div class="stat-value" id="statSessionCount">0</div>
-            <p class="stat-hint" id="statSessionHint">No screenings yet this session.</p>
+        <div class="grid-3" style="margin-top:1.4rem">
+          <article class="card lift">
+            <p class="tech-label">Quality gate</p>
+            <h2 class="card-title" style="margin:.5rem 0">Know before you grade</h2>
+            <p class="card-sub">Brightness, contrast, field of view and focus are assessed first. Ungradable images are returned with recapture guidance instead of a guess.</p>
           </article>
-          <article class="card stat-card">
-            <div class="stat-top"><span class="stat-label">Last prediction</span><span class="stat-icon">◎</span></div>
-            <div class="stat-value" id="statLastGrade">—</div>
-            <p class="stat-hint" id="statLastConf">Run a screening to see results here.</p>
+          <article class="card lift">
+            <p class="tech-label">Classification</p>
+            <h2 class="card-title" style="margin:.5rem 0">Five severity grades</h2>
+            <p class="card-sub">A frozen EfficientNetB0 pipeline classifies each image from No DR to Proliferative DR, with a calibrated referable-screening signal.</p>
           </article>
-          <article class="card stat-card">
-            <div class="stat-top"><span class="stat-label">Model</span><span class="stat-icon">⬡</span></div>
-            <div class="stat-value small mono" id="statModelName">B0_CLASSWEIGHTED…</div>
-            <p class="stat-hint">EfficientNetB0 · 224×224 · 5 classes · frozen</p>
-          </article>
-          <article class="card stat-card">
-            <div class="stat-top"><span class="stat-label">Inference service</span><span class="dot dot-live" id="statSysDot"></span></div>
-            <div class="stat-value small" id="statSysValue">Checking…</div>
-            <p class="stat-hint" id="statSysHint">Live status from /health.</p>
+          <article class="card lift">
+            <p class="tech-label">Explainability</p>
+            <h2 class="card-title" style="margin:.5rem 0">Show the reasoning</h2>
+            <p class="card-sub">Grad-CAM attention maps plus vessel, exudate and optic-disc visualizations expose what the model analyzed — attention only, never proof.</p>
           </article>
         </div>
+      </div>
+    </section>
 
-        <div class="two-col">
-          <article class="card">
-            <div class="card-head">
-              <div><h2 class="card-title">Screening pipeline</h2><p class="card-sub">Every image follows the same auditable path.</p></div>
-              <button class="btn btn-ghost btn-sm" data-goto="screening"><span>Start upload →</span></button>
-            </div>
-            <ol class="pipeline">
-              <li><span class="pipe-n">1</span><div><strong>Upload</strong><p>Fundus image · JPG / PNG · ≤10 MB</p></div></li>
-              <li><span class="pipe-n">2</span><div><strong>Quality check</strong><p>Brightness · contrast · field of view · flags</p></div></li>
-              <li><span class="pipe-n">3</span><div><strong>AI screening</strong><p>EfficientNetB0 feature analysis</p></div></li>
-              <li><span class="pipe-n">4</span><div><strong>Prediction</strong><p>5-class severity + confidence</p></div></li>
-              <li><span class="pipe-n">5</span><div><strong>Explainability</strong><p>Grad-CAM metadata · advisory only</p></div></li>
-              <li><span class="pipe-n">6</span><div><strong>Clinical review</strong><p>Professional review required</p></div></li>
-            </ol>
-          </article>
-
-          <article class="card">
-            <div class="card-head">
-              <div><h2 class="card-title">Recent session activity</h2><p class="card-sub">Stored locally for this session only.</p></div>
-              <button class="btn btn-ghost btn-sm" data-goto="history"><span>View all →</span></button>
-            </div>
-            <div id="overviewRecent">
-              <div class="empty-state">
-                <div class="empty-icon" aria-hidden="true">▦</div>
-                <p class="empty-title">No screenings yet</p>
-                <p class="empty-sub">Start a new screening to begin building your session history.</p>
-                <button class="btn btn-primary btn-sm" data-goto="screening"><span>Start screening</span></button>
-              </div>
-            </div>
-          </article>
+    <!-- ============ HOW IT WORKS ============ -->
+    <section class="view" id="view-how" aria-labelledby="howTitle" hidden>
+      <div class="page">
+        <span class="eyebrow">Screening pipeline</span>
+        <h1 class="section-title" id="howTitle">How it works</h1>
+        <p class="section-sub">Every image follows the same auditable path — from upload to a structured, review-ready screening result.</p>
+        <div class="how5">
+          <div class="how-step"><div class="how-n">01</div><h3>Upload</h3><p>Upload a retinal fundus image.</p></div>
+          <div class="how-step"><div class="how-n">02</div><h3>Quality check</h3><p>The system evaluates whether the image is suitable for analysis.</p></div>
+          <div class="how-step"><div class="how-n">03</div><h3>Preprocessing</h3><p>The image is prepared for AI inference.</p></div>
+          <div class="how-step"><div class="how-n">04</div><h3>AI analysis</h3><p>The trained deep-learning pipeline analyzes the retinal image.</p></div>
+          <div class="how-step"><div class="how-n">05</div><h3>Result</h3><p>The system presents the screening classification, confidence, quality assessment and available explainability information.</p></div>
         </div>
-      </section>
-
-      <!-- ======== NEW SCREENING ======== -->
-      <section class="view" id="view-screening" aria-labelledby="screeningTitle" hidden>
-        <div class="page-head">
-          <div>
-            <h1 id="screeningTitle">New Screening</h1>
-            <p class="page-sub">Upload a retinal fundus image to begin AI-assisted screening.</p>
+        <div class="card" style="margin-top:2rem">
+          <div class="card-head">
+            <div><h2 class="card-title">Under the hood</h2><p class="card-sub">Frozen, auditable inference path. Values below are live from the backend where shown.</p></div>
+            <button class="btn btn-secondary btn-sm" data-goto="screening"><span>Try it now →</span></button>
           </div>
-          <ol class="steps-mini" aria-label="Workflow progress">
+          <dl class="kv big">
+            <div><dt>Model</dt><dd class="mono">B0_CLASSWEIGHTED_FINETUNED_224</dd></div>
+            <div><dt>Architecture</dt><dd>EfficientNetB0 · TensorFlow / Keras</dd></div>
+            <div><dt>Input</dt><dd class="mono">224 × 224 · RGB · [0, 1]</dd></div>
+            <div><dt>Classes</dt><dd>5 — No DR · Mild · Moderate · Severe · Proliferative</dd></div>
+            <div><dt>Referable rule</dt><dd class="mono">P(Level 2+) ≥ 0.40 (frozen)</dd></div>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SCREENING WORKSPACE ============ -->
+    <section class="view" id="view-screening" aria-labelledby="screenTitle" hidden>
+      <div class="page">
+        <div class="card-head" style="align-items:center">
+          <div>
+            <span class="eyebrow">Medical imaging workstation</span>
+            <h1 class="section-title" id="screenTitle" style="margin-top:.5rem">Screening</h1>
+            <p class="section-sub">Analyze a retinal fundus image.</p>
+          </div>
+          <ol class="steps-mini" id="stepsMini" aria-label="Workflow progress">
             <li class="is-active" data-step="upload">Upload</li>
             <li data-step="quality">Quality</li>
             <li data-step="screen">AI screening</li>
@@ -201,355 +139,316 @@
           </ol>
         </div>
 
-        <!-- Upload workspace -->
-        <div id="uploadWorkspace">
-          <article class="card upload-card">
-            <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Upload retinal image. Drag and drop or press Enter to browse.">
-              <input type="file" id="fileInput" name="image" accept=".jpg,.jpeg,.png,image/jpeg,image/png" hidden>
-              <div class="drop-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              </div>
-              <p class="drop-title">Upload retinal image</p>
-              <p class="drop-sub">Drag &amp; drop your fundus image here or <span class="linklike">browse files</span></p>
-              <div class="drop-meta">
-                <span class="meta-chip">JPG / JPEG / PNG</span>
-                <span class="meta-chip">Maximum 10 MB</span>
-                <span class="meta-chip">Fundus photo</span>
-              </div>
+        <!-- Upload / preview -->
+        <article class="card" id="uploadCard">
+          <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Upload retinal image. Drag and drop or press Enter to browse.">
+            <input type="file" id="fileInput" name="image" accept=".jpg,.jpeg,.png,image/jpeg,image/png" hidden>
+            <div class="drop-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             </div>
-
-            <!-- Preview state -->
-            <div class="preview-wrap hidden" id="previewWrap">
-              <div class="preview-media">
-                <img id="imagePreview" src="" alt="Selected fundus image preview">
-                <span class="readiness-pill" id="readinessPill"><span class="dot dot-live"></span> Image ready</span>
-              </div>
-              <div class="preview-info">
-                <h2 class="card-title">Image ready for screening</h2>
-                <dl class="file-meta">
-                  <div><dt>File</dt><dd id="metaName">—</dd></div>
-                  <div><dt>Type</dt><dd id="metaType">—</dd></div>
-                  <div><dt>Size</dt><dd id="metaSize">—</dd></div>
-                  <div><dt>Dimensions</dt><dd id="metaDims">Reading…</dd></div>
-                </dl>
-                <div class="preview-actions">
-                  <button class="btn btn-secondary" id="changeBtn"><span>Change image</span></button>
-                  <button class="btn btn-primary" id="analyzeBtn">
-                    <span>Analyze image</span>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-                  </button>
-                </div>
-                <p class="fine-print">Quality is assessed automatically after upload. Advisory only — not a diagnostic gate.</p>
-              </div>
+            <p class="drop-title">DROP RETINAL IMAGE HERE</p>
+            <p class="drop-sub">or <span class="linklike">browse files</span></p>
+            <div class="chip-row" style="justify-content:center;margin-top:1rem">
+              <span class="meta-chip">JPG / JPEG / PNG</span>
+              <span class="meta-chip">MAX 10 MB</span>
+              <span class="meta-chip">FUNDUS PHOTO</span>
             </div>
-          </article>
-        </div>
+          </div>
+          <div class="preview-wrap hidden" id="previewWrap">
+            <div class="preview-media">
+              <img id="imagePreview" src="" alt="Selected fundus image preview">
+              <span class="readiness"><span class="dot dot-live"></span> Image ready</span>
+            </div>
+            <div>
+              <p class="tech-label">Selected image</p>
+              <h2 class="card-title" style="margin:.4rem 0 .2rem">Ready for screening</h2>
+              <dl class="file-meta">
+                <div><dt>File</dt><dd id="metaName">—</dd></div>
+                <div><dt>Type</dt><dd id="metaType">—</dd></div>
+                <div><dt>Size</dt><dd id="metaSize">—</dd></div>
+                <div><dt>Dimensions</dt><dd id="metaDims">Reading…</dd></div>
+              </dl>
+              <div class="preview-actions">
+                <button class="btn btn-primary" id="analyzeBtn"><span>ANALYZE IMAGE</span><span aria-hidden="true">→</span></button>
+                <button class="btn btn-secondary" id="changeBtn"><span>Remove</span></button>
+              </div>
+              <p class="fine-print" style="margin-top:.8rem">Image quality is assessed automatically after analysis begins.</p>
+            </div>
+          </div>
+        </article>
 
-        <!-- Loading timeline -->
-        <article class="card timeline-card hidden" id="loadingCard" aria-live="polite">
-          <div class="timeline-head">
+        <!-- Analysis state -->
+        <article class="card analyzing hidden" id="loadingCard" aria-live="polite">
+          <div style="display:flex;gap:1rem;align-items:center">
             <div class="spinner" aria-hidden="true"></div>
             <div>
-              <h2 class="card-title">Analyzing retinal image</h2>
-              <p class="card-sub" id="timelineSub">Communicating with the inference service…</p>
+              <p class="tech-label">Processing</p>
+              <h2 class="card-title" style="font-size:1.3rem">ANALYZING RETINAL IMAGE</h2>
+              <p class="card-sub">Single request in flight. Staged messages below are illustrative — they do not mirror backend progress events.</p>
             </div>
-            <span class="status-pill glass"><span class="dot dot-pulse"></span> Processing</span>
           </div>
-          <ol class="timeline" id="timelineList">
-            <li data-stage="received"><span class="tl-icon">✓</span><div><strong>Image received</strong><p>Upload validated · format &amp; size checked</p></div></li>
-            <li data-stage="quality"><span class="tl-icon">✓</span><div><strong>Assessing image quality</strong><p>Brightness · contrast · field of view</p></div></li>
-            <li data-stage="features"><span class="tl-icon">●</span><div><strong>Processing retinal features</strong><p>EfficientNetB0 · 224×224 preprocessing</p></div></li>
-            <li data-stage="classify"><span class="tl-icon">○</span><div><strong>Classifying DR severity</strong><p>5-class probability distribution</p></div></li>
-            <li data-stage="report"><span class="tl-icon">○</span><div><strong>Preparing screening result</strong><p>Quality · prediction · explainability metadata</p></div></li>
+          <ol class="stage-list" id="stageList">
+            <li data-stage="0"><span class="st-ic">○</span><div><strong>Preparing image</strong><p>Validating upload format and size</p></div></li>
+            <li data-stage="1"><span class="st-ic">○</span><div><strong>Checking image quality</strong><p>Brightness · contrast · field of view · focus</p></div></li>
+            <li data-stage="2"><span class="st-ic">○</span><div><strong>Running AI model</strong><p>Deep-learning screening pipeline</p></div></li>
+            <li data-stage="3"><span class="st-ic">○</span><div><strong>Generating screening result</strong><p>Classification · explainability · report data</p></div></li>
           </ol>
-          <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="timelineProgress"></div></div>
+          <div class="scanbar" aria-hidden="true"><div></div></div>
+        </article>
+
+        <!-- 422 recapture -->
+        <article class="card recapture hidden" id="recaptureCard" aria-live="polite">
+          <div class="card-head">
+            <div>
+              <p class="tech-label" style="color:#ffd58a">Quality gate</p>
+              <h2 class="card-title" style="font-size:1.4rem">IMAGE QUALITY INSUFFICIENT</h2>
+              <p class="card-sub">The system declined to grade this image. No screening result was produced.</p>
+            </div>
+            <span class="badge warn" id="rcStatus">—</span>
+          </div>
+          <div class="grid-2">
+            <div>
+              <h3 class="mini-title">Why it was held</h3>
+              <dl class="kv">
+                <div><dt>Quality score</dt><dd class="mono" id="rcScore">—</dd></div>
+                <div><dt>Guidance</dt><dd id="rcFeedback" style="max-width:32ch">—</dd></div>
+              </dl>
+              <div class="flags" id="rcFlags"></div>
+              <p class="fine-print" id="rcHint" style="margin-top:.8rem"></p>
+            </div>
+            <div>
+              <h3 class="mini-title">Next step</h3>
+              <p class="card-sub">Re-acquire the fundus image with a clean lens, stable focus and even illumination, then upload again.</p>
+              <div class="result-actions">
+                <button class="btn btn-primary" id="newUploadBtn"><span>UPLOAD ANOTHER IMAGE</span></button>
+                <button class="btn btn-ghost btn-sm" id="retryDemoBtn"><span>Retry in demo mode (bypasses quality gate)</span></button>
+              </div>
+              <p class="fine-print" style="margin-top:.6rem">Demo mode appends <span class="mono">?force=1</span> for demonstration only — not a clinical workflow.</p>
+            </div>
+          </div>
+        </article>
+
+        <!-- Generic error -->
+        <article class="card hidden" id="errorCard" aria-live="polite" style="border-color:rgba(240,68,56,.4)">
+          <p class="tech-label" style="color:#ff9d97">Request failed</p>
+          <h2 class="card-title" style="font-size:1.3rem;margin:.3rem 0" id="errTitle">Something went wrong</h2>
+          <p class="card-sub" id="errMsg">—</p>
+          <details class="tech" style="margin-top:1rem"><summary>Technical details</summary><pre class="code" id="errDetail">—</pre></details>
+          <div class="result-actions">
+            <button class="btn btn-secondary" id="errRetry"><span>Try again</span></button>
+            <button class="btn btn-ghost" id="errNew"><span>New screening</span></button>
+          </div>
         </article>
 
         <!-- Results -->
-        <div id="resultWorkspace" class="hidden">
-          <article class="card result-hero" id="resultHero">
-            <div class="result-hero-top">
+        <div id="resultWorkspace" class="hidden stack" style="margin-top:1.2rem">
+          <article class="card result-hero">
+            <div class="card-head" style="margin-bottom:0">
               <span class="eyebrow">Screening result</span>
-              <span class="status-pill glass" id="resultQualityPill"><span class="dot"></span><span id="resultQualityPillText">—</span></span>
+              <span class="badge" id="refStatus">—</span>
             </div>
             <div class="result-hero-grid">
               <div>
                 <div class="grade-badge" id="gradeBadge">—</div>
-                <p class="grade-sub" id="gradeSub">Predicted severity grade</p>
-                <div class="safety-inline" role="note">
-                  <strong>Screening support only.</strong> This result is not a medical diagnosis and requires review by a qualified healthcare professional.
+                <p class="card-sub" id="gradeSub" style="margin-top:.7rem">AI screening result</p>
+                <div class="safety" role="note" style="margin:1rem 0 0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <p><strong>Screening support only.</strong> This system does not provide a medical diagnosis. Results should be reviewed by a qualified healthcare professional.</p>
                 </div>
               </div>
-              <div class="confidence-block">
+              <div>
                 <div class="ring-wrap" role="img" id="ringA11y" aria-label="Model confidence">
                   <svg class="ring" viewBox="0 0 120 120" aria-hidden="true">
                     <circle cx="60" cy="60" r="52" class="ring-track"/>
                     <circle cx="60" cy="60" r="52" class="ring-fill" id="ringFill"/>
                   </svg>
-                  <div class="ring-center"><span class="ring-val" id="confidenceValue">—</span><span class="ring-label">Model confidence</span></div>
+                  <div class="ring-center"><span class="ring-val" id="confValue">—</span><span class="ring-label">Confidence</span></div>
                 </div>
-                <p class="fine-print center">Confidence reflects model output strength, not clinical probability.</p>
+                <p class="fine-print center" style="margin-top:.6rem">Model output strength — not a clinical probability.</p>
+                <dl class="kv" style="margin-top:.8rem">
+                  <div><dt>Case ID</dt><dd class="mono" id="caseId">—</dd></div>
+                  <div><dt>Analysis time</dt><dd class="mono" id="elapsedTime">—</dd></div>
+                </dl>
               </div>
             </div>
           </article>
 
-          <div class="two-col result-grid">
+          <div class="grid-2">
             <article class="card">
-              <div class="card-head">
-                <div><h2 class="card-title">Retinal image</h2><p class="card-sub" id="resultFileName">Uploaded fundus photograph</p></div>
-                <div class="seg" role="tablist" aria-label="Image view">
-                  <button class="seg-btn is-active" data-imgtab="original" role="tab" aria-selected="true">Original</button>
-                  <button class="seg-btn" data-imgtab="attention" role="tab" aria-selected="false">Grad-CAM Heatmap</button>
-                  <button class="seg-btn" data-imgtab="overlay" role="tab" aria-selected="false">Heatmap Overlay</button>
-                  <button class="seg-btn" data-imgtab="vessel" role="tab" aria-selected="false">Vessels (DRIVE)</button>
-                  <button class="seg-btn" data-imgtab="exudate" role="tab" aria-selected="false">Exudates (IDRiD)</button>
-                </div>
-              </div>
-              <div class="viewer" id="viewer">
-                <img id="resultImage" src="" alt="Uploaded retinal fundus image used for screening">
-                <div class="viewer-overlay glass hidden" id="viewerNotice">
-                  <strong>Visualization loading...</strong>
-                  <p>Generating explainability map...</p>
-                </div>
-              </div>
-              <div class="viewer-controls">
-                <button class="btn btn-ghost btn-sm" id="fitBtn"><span>Fit</span></button>
-                <button class="btn btn-ghost btn-sm" id="zoomInBtn"><span>Zoom +</span></button>
-                <button class="btn btn-ghost btn-sm" id="zoomOutBtn"><span>Zoom −</span></button>
-                <button class="btn btn-ghost btn-sm" id="resetZoomBtn"><span>Reset</span></button>
-              </div>
-            </article>
-
-            <article class="card">
-              <div class="card-head"><div><h2 class="card-title">Prediction probabilities</h2><p class="card-sub">All five severity classes · predicted class highlighted.</p></div></div>
-              <div id="probabilityBars" class="bars"></div>
-              <div class="divider"></div>
-              <h3 class="mini-title">Model context</h3>
-              <dl class="kv">
-                <div><dt>Model</dt><dd class="mono" id="ctxModel">B0_CLASSWEIGHTED_FINETUNED_224</dd></div>
-                <div><dt>Architecture</dt><dd id="ctxArch">EfficientNetB0</dd></div>
-                <div><dt>Input</dt><dd class="mono">224 × 224</dd></div>
+              <div class="card-head"><div><p class="tech-label">Referable screening</p><h2 class="card-title">Referral signal</h2></div></div>
+              <dl class="kv big">
+                <div><dt>Status</dt><dd id="refLabel">—</dd></div>
+                <div><dt>Score</dt><dd class="mono" id="refScore">—</dd></div>
+                <div><dt>Threshold</dt><dd class="mono" id="refThreshold">—</dd></div>
               </dl>
+              <p class="fine-print" id="refNote" style="margin-top:.7rem"></p>
+            </article>
+            <article class="card">
+              <div class="card-head"><div><p class="tech-label">Classification</p><h2 class="card-title">Probability distribution</h2></div></div>
+              <div id="probBars"></div>
+              <p class="fine-print" style="margin-top:.7rem">Backend class order · predicted class highlighted.</p>
             </article>
           </div>
 
-          <div class="two-col">
+          <div class="grid-2">
             <article class="card" id="qualityCard">
-              <div class="card-head">
-                <div><h2 class="card-title">Image quality</h2><p class="card-sub">Automated advisory assessment · not clinical validation.</p></div>
-                <span class="status-badge" id="qualityStatus">—</span>
-              </div>
-              <div class="q-rows">
-                <div class="q-row"><span>Quality score</span><div class="bar"><div id="qualityScoreFill"></div></div><strong id="qualityScoreVal">—</strong></div>
-                <div class="q-row"><span>Brightness</span><div class="bar"><div id="brightnessFill"></div></div><strong id="brightnessVal">—</strong></div>
-                <div class="q-row"><span>Contrast</span><div class="bar"><div id="contrastFill"></div></div><strong id="contrastVal">—</strong></div>
-                <div class="q-row"><span>Field of view</span><div class="bar"><div id="fovFill"></div></div><strong id="fovVal">—</strong></div>
-              </div>
-              <dl class="kv">
-                <div><dt>Dimensions</dt><dd class="mono" id="qDims">—</dd></div>
-                <div><dt>Black background</dt><dd class="mono" id="qBlack">—</dd></div>
-              </dl>
-              <div id="qualityFlags" class="flags"></div>
-              <div class="callout hidden" id="qualityAdvice">
-                <strong id="qualityAdviceTitle">Review required</strong>
-                <p id="qualityAdviceBody">Potential issues detected. Consider recapturing with improved illumination and retinal field coverage.</p>
-              </div>
+              <div class="card-head"><div><p class="tech-label">Quality assessment</p><h2 class="card-title">Image quality</h2></div><span class="badge" id="qStatus">—</span></div>
+              <div id="qualityBody"></div>
             </article>
-
             <article class="card">
-              <div class="card-head"><div><h2 class="card-title">AI explanation &amp; Reports</h2><p class="card-sub">How to interpret this prediction.</p></div><span class="meta-chip">Grad-CAM · <span id="gradcamAvail">Available</span></span></div>
-              <dl class="kv">
-                <div><dt>Method</dt><dd id="gMethod">Grad-CAM (JET Colormap)</dd></div>
-                <div><dt>Target layer</dt><dd class="mono" id="gLayer">top_conv</dd></div>
-                <div><dt>Status</dt><dd id="gNote">Colorized attention map &amp; lesion overlays loaded.</dd></div>
-              </dl>
-              <div class="callout neutral">
-                <strong>Annotated PDF Clinical Report Ready</strong>
-                <p>Generate a 30-second vector PDF screening report for human-in-the-loop review.</p>
-                <button class="btn btn-primary btn-sm" id="downloadPdfBtnHeader" style="margin-top:0.5rem"><span>Download PDF Report</span></button>
+              <div class="card-head">
+                <div><p class="tech-label">Retinal visualization</p><h2 class="card-title" id="viewerTitle">Image viewer</h2></div>
               </div>
+              <div class="seg" id="viewerTabs" role="tablist" aria-label="Visualization layers"></div>
+              <div class="viewer" style="margin-top:.9rem">
+                <img id="viewerImage" src="" alt="Retinal visualization">
+              </div>
+              <div class="viewer-cap">
+                <p class="fine-print" id="viewerCaption">—</p>
+                <div class="viewer-controls" role="group" aria-label="Viewer zoom">
+                  <button class="icon-btn" id="zoomFit">Fit</button>
+                  <button class="icon-btn" id="zoomIn">Zoom +</button>
+                  <button class="icon-btn" id="zoomOut">Zoom −</button>
+                  <button class="icon-btn" id="zoomReset">Reset</button>
+                </div>
+              </div>
+              <p class="fine-print" id="viewerMeta" style="margin-top:.5rem"></p>
+            </article>
+          </div>
+
+          <div class="grid-2">
+            <article class="card">
+              <div class="card-head"><div><p class="tech-label">Explainability</p><h2 class="card-title">AI explainability</h2></div></div>
+              <div id="gcamMeta"></div>
               <div class="divider"></div>
-              <h3 class="mini-title">Preprocessing</h3>
-              <div class="chip-row" id="preprocessChips"></div>
+              <h3 class="mini-title">Lesion / grade correlation</h3>
+              <p class="card-sub" id="corrText">—</p>
+              <h3 class="mini-title" style="margin-top:1rem">30-second validation checklist</h3>
+              <ol class="check-list" id="checkList"></ol>
+            </article>
+            <article class="card">
+              <div class="card-head"><div><p class="tech-label">Model · Technical</p><h2 class="card-title">Technical analysis</h2></div></div>
+              <div id="techBody"></div>
+              <div class="divider"></div>
+              <h3 class="mini-title">Provide feedback</h3>
+              <p class="card-sub">Was this screening result useful?</p>
+              <div class="fb-row" role="group" aria-label="Feedback rating">
+                <button class="fb-btn" data-rating="useful">USEFUL</button>
+                <button class="fb-btn" data-rating="not_useful">NOT USEFUL</button>
+                <button class="fb-btn" data-rating="unsure">UNSURE</button>
+              </div>
+              <label class="fine-print" for="fbComment">Optional comment</label>
+              <textarea id="fbComment" maxlength="500" placeholder="Add context for the care team (optional)…"></textarea>
+              <p class="char-count"><span id="fbCount">0</span> / 500</p>
+              <div class="result-actions">
+                <button class="btn btn-secondary btn-sm" id="fbSend"><span>Send feedback</span></button>
+                <span class="fine-print" id="fbMsg" role="status"></span>
+              </div>
             </article>
           </div>
 
           <div class="result-actions">
-            <button class="btn btn-primary" id="downloadPdfBtn">
-              <svg viewBox="0 0 24 24" stroke-width="2" width="18" height="18" fill="none" stroke="currentColor" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              <span>Download PDF Report</span>
-            </button>
-            <button class="btn btn-secondary" id="newAnalysisBtn"><span>Start new analysis</span></button>
-            <button class="btn btn-ghost" id="copySummaryBtn"><span>Copy summary</span></button>
-            <button class="btn btn-ghost" data-goto="history"><span>View history →</span></button>
+            <button class="btn btn-primary" id="reportBtn"><span>GENERATE SCREENING REPORT</span></button>
+            <button class="btn btn-secondary" id="copyBtn"><span>Copy summary</span></button>
+            <button class="btn btn-ghost" id="newBtn"><span>New screening →</span></button>
           </div>
-        </div>
-      </section>
+          <p class="fine-print" id="reportMsg" role="status"></p>
 
-      <!-- ======== HISTORY ======== -->
-      <section class="view" id="view-history" aria-labelledby="historyTitle" hidden>
-        <div class="page-head">
-          <div><h1 id="historyTitle">Screening History</h1><p class="page-sub">Session-local record. No persistent storage or patient data is fabricated.</p></div>
-          <button class="btn btn-primary btn-sm" data-goto="screening"><span>+ New screening</span></button>
-        </div>
-        <article class="card">
-          <div class="table-wrap">
-            <table class="table" id="historyTable">
-              <thead><tr><th scope="col">Date</th><th scope="col">Case</th><th scope="col">Prediction</th><th scope="col">Confidence</th><th scope="col">Image quality</th><th scope="col">Status</th></tr></thead>
-              <tbody id="historyBody"></tbody>
-            </table>
-            <div class="empty-state" id="historyEmpty">
-              <div class="empty-icon" aria-hidden="true">◔</div>
-              <p class="empty-title">No saved screenings yet.</p>
-              <p class="empty-sub">Start a new screening to begin building your history.</p>
-              <button class="btn btn-primary btn-sm" data-goto="screening"><span>Start a new screening</span></button>
+          <!-- Session history -->
+          <article class="card" id="historyCard">
+            <div class="card-head">
+              <div><p class="tech-label">Session only · not permanently stored</p><h2 class="card-title">Screening history</h2></div>
+              <div class="chip-row">
+                <span class="meta-chip">N · <span id="insCount">0</span></span>
+                <span class="meta-chip">AVG CONF · <span id="insAvg">—</span></span>
+                <span class="meta-chip">TOP GRADE · <span id="insTop">—</span></span>
+                <span class="meta-chip">QUALITY PASS · <span id="insQuality">—</span></span>
+              </div>
             </div>
-          </div>
-        </article>
-      </section>
-
-      <!-- ======== INSIGHTS ======== -->
-      <section class="view" id="view-insights" aria-labelledby="insightsTitle" hidden>
-        <div class="page-head">
-          <div><h1 id="insightsTitle">AI Insights</h1><p class="page-sub">Aggregates computed only from screenings run in this session. No clinical statistics are fabricated.</p></div>
-        </div>
-        <div class="stat-grid" id="insightsStats">
-          <article class="card stat-card"><div class="stat-top"><span class="stat-label">Screenings this session</span></div><div class="stat-value" id="insCount">0</div><p class="stat-hint">Local session only.</p></article>
-          <article class="card stat-card"><div class="stat-top"><span class="stat-label">Average confidence</span></div><div class="stat-value" id="insAvgConf">—</div><p class="stat-hint">Mean model confidence.</p></article>
-          <article class="card stat-card"><div class="stat-top"><span class="stat-label">Most frequent grade</span></div><div class="stat-value" id="insTopGrade">—</div><p class="stat-hint">Session distribution.</p></article>
-          <article class="card stat-card"><div class="stat-top"><span class="stat-label">Quality pass rate</span></div><div class="stat-value" id="insQuality">—</div><p class="stat-hint">Share marked acceptable.</p></article>
-        </div>
-        <article class="card">
-          <div class="card-head"><div><h2 class="card-title">Grade distribution (this session)</h2><p class="card-sub">Live from your session history.</p></div></div>
-          <div id="insightsDist" class="bars"></div>
-          <div class="empty-state hidden" id="insightsEmpty">
-            <p class="empty-title">No data yet</p>
-            <p class="empty-sub">Run at least one screening to populate insights.</p>
-          </div>
-        </article>
-      </section>
-
-      <!-- ======== SIMULINK ======== -->
-      <section class="view" id="view-simulink" aria-labelledby="simulinkTitle" hidden>
-        <div class="page-head">
-          <div><h1 id="simulinkTitle">Simulink Telemedicine Telemetry</h1><p class="page-sub">District-Level Telemedicine Screening Optimization Model (100,000+ patients/year).</p></div>
-          <span class="meta-chip">MATLAB / Simulink Model</span>
-        </div>
-        <div class="stat-grid">
-          <article class="card stat-card"><div class="stat-top"><span class="stat-label">Annual Patient Target</span></div><div class="stat-value small">100,000+</div><p class="stat-hint">15 Primary Health Centers</p></article>
-          <article class="card stat-card"><div class="stat-top"><span class="stat-label">Review Throughput Boost</span></div><div class="stat-value small">31.5×</div><p class="stat-hint">28.5s vs 15m manual exam</p></article>
-          <article class="card stat-card"><div class="stat-top"><span class="stat-label">Network Latency Queue</span></div><div class="stat-value small">4.2 min</div><p class="stat-hint">Average telemedicine wait</p></article>
-          <article class="card stat-card"><div class="stat-top"><span class="stat-label">Ophthalmologist Nodes</span></div><div class="stat-value small">3 Nodes</div><p class="stat-hint">Serving 274 daily cases</p></article>
-        </div>
-        <div class="two-col" style="margin-top:1.5rem">
-          <article class="card">
-            <h2 class="card-title">Pipeline Efficiency &amp; Quality Distribution</h2>
-            <dl class="kv big">
-              <div><dt>Direct Grade Acceptable</dt><dd class="mono">82.4% (Direct AI Pipeline)</dd></div>
-              <div><dt>Borderline Focus Auto-Enhanced</dt><dd class="mono">14.1% (Adaptive CLAHE)</dd></div>
-              <div><dt>Ungradable Recapture Rate</dt><dd class="mono">3.5% (Field Technician Advisory)</dd></div>
-              <div><dt>Cellular Uplink Bandwidth</dt><dd class="mono">2.5 Mbps (350 KB Compressed Image)</dd></div>
-            </dl>
-          </article>
-          <article class="card">
-            <h2 class="card-title">SIH Problem Statement Verification</h2>
-            <ol class="pipeline vertical">
-              <li><span class="pipe-n">1</span><div><strong>Sensitivity Target (&gt;90%)</strong><p>Referable DR (Level 2+) Sensitivity: 92.28% PASS</p></div></li>
-              <li><span class="pipe-n">2</span><div><strong>Specificity Target (&gt;85%)</strong><p>Referable DR Specificity: 91.49% PASS</p></div></li>
-              <li><span class="pipe-n">3</span><div><strong>Explainability &amp; Report</strong><p>Grad-CAM heatmap + Lesion evidence + Vector PDF</p></div></li>
-              <li><span class="pipe-n">4</span><div><strong>Telemedicine Simulation</strong><p>Simulink model: <code>simulink/build_retinaguard_simulink.m</code></p></div></li>
-            </ol>
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th scope="col">Date</th><th scope="col">Case</th><th scope="col">Prediction</th><th scope="col">Confidence</th><th scope="col">Image quality</th><th scope="col">Status</th></tr></thead>
+                <tbody id="historyBody"></tbody>
+              </table>
+              <div class="empty-state" id="historyEmpty">
+                <div class="empty-icon" aria-hidden="true">◔</div>
+                <p class="empty-title">No screenings yet this session.</p>
+                <p class="empty-sub">Results you generate will appear here until you leave or reload.</p>
+              </div>
+            </div>
           </article>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <!-- ======== MODEL ======== -->
-      <section class="view" id="view-model" aria-labelledby="modelTitle" hidden>
-        <div class="page-head">
-          <div><h1 id="modelTitle">Model Information</h1><p class="page-sub">Frozen champion model · auditable inference path.</p></div>
-          <span class="meta-chip">TensorFlow / Keras</span>
-        </div>
-        <div class="two-col">
+    <!-- ============ ABOUT ============ -->
+    <section class="view" id="view-about" aria-labelledby="aboutTitle" hidden>
+      <div class="page">
+        <span class="eyebrow">About RetinaGuard</span>
+        <h1 class="section-title" id="aboutTitle">Built for explainable screening</h1>
+        <p class="section-sub">RetinaGuard is an AI-assisted diabetic retinopathy screening workspace. It supports — never replaces — qualified clinical review.</p>
+
+        <div class="grid-2" style="margin-top:1.6rem">
           <article class="card">
-            <h2 class="card-title">Champion model</h2>
+            <p class="tech-label">Model</p>
+            <h2 class="card-title" style="font-size:1.3rem;margin:.4rem 0">EfficientNetB0 · 224 × 224 · 5 classes</h2>
             <dl class="kv big">
               <div><dt>Model</dt><dd class="mono">B0_CLASSWEIGHTED_FINETUNED_224</dd></div>
-              <div><dt>Architecture</dt><dd>EfficientNetB0</dd></div>
-              <div><dt>Input</dt><dd class="mono">224 × 224 · RGB · [0,1]</dd></div>
-              <div><dt>Classes</dt><dd>5 — No DR · Mild · Moderate · Severe · Proliferative</dd></div>
-              <div><dt>Framework</dt><dd>TensorFlow / Keras</dd></div>
-              <div><dt>Inference</dt><dd>Frozen champion · softmax output · no re-normalization</dd></div>
+              <div><dt>Task</dt><dd>Diabetic Retinopathy Classification</dd></div>
+              <div><dt>Classes</dt><dd>No DR · Mild · Moderate · Severe · Proliferative</dd></div>
+              <div><dt>Referable rule</dt><dd class="mono">P(Level 2+) ≥ 0.40</dd></div>
+              <div><dt>Explainability</dt><dd>Grad-CAM · vessel / exudate / optic-disc overlays</dd></div>
             </dl>
-            <div class="divider"></div>
-            <h3 class="mini-title">Preprocessing</h3>
-            <div class="chip-row"><span class="meta-chip">RGB</span><span class="meta-chip">Crop (thr 10 · pad 10)</span><span class="meta-chip">Resize 224×224</span><span class="meta-chip">Normalize [0,1]</span><span class="meta-chip">No augmentation</span></div>
           </article>
           <article class="card">
-            <h2 class="card-title">Inference pipeline</h2>
-            <ol class="pipeline vertical">
-              <li><span class="pipe-n">1</span><div><strong>Fundus image</strong><p>JPG / PNG · ≤10 MB</p></div></li>
-              <li><span class="pipe-n">2</span><div><strong>Image quality assessment</strong><p>Advisory score + flags</p></div></li>
-              <li><span class="pipe-n">3</span><div><strong>Preprocessing</strong><p>Crop · resize · normalize</p></div></li>
-              <li><span class="pipe-n">4</span><div><strong>EfficientNetB0</strong><p>Frozen weights</p></div></li>
-              <li><span class="pipe-n">5</span><div><strong>5-class prediction</strong><p>Probabilities + confidence</p></div></li>
-              <li><span class="pipe-n">6</span><div><strong>Explainability</strong><p>Grad-CAM metadata</p></div></li>
-              <li><span class="pipe-n">7</span><div><strong>Screening result</strong><p>Clinical review required</p></div></li>
-            </ol>
+            <div class="card-head">
+              <div><p class="tech-label">Live · GET /health</p><h2 class="card-title">System status</h2></div>
+              <button class="btn btn-secondary btn-sm" id="refreshHealth"><span>Refresh</span></button>
+            </div>
+            <dl class="kv big">
+              <div><dt>Status</dt><dd id="stStatus">—</dd></div>
+              <div><dt>Service</dt><dd class="mono" id="stService">—</dd></div>
+              <div><dt>Model</dt><dd class="mono" id="stModel">—</dd></div>
+              <div><dt>Input size</dt><dd class="mono" id="stInput">—</dd></div>
+              <div><dt>Classes</dt><dd class="mono" id="stClasses">—</dd></div>
+            </dl>
+            <details class="tech" style="margin-top:1rem"><summary>Raw response</summary><pre class="code" id="healthRaw">—</pre></details>
           </article>
         </div>
-      </section>
 
-      <!-- ======== STATUS ======== -->
-      <section class="view" id="view-status" aria-labelledby="statusTitle" hidden>
-        <div class="page-head">
-          <div><h1 id="statusTitle">System Status</h1><p class="page-sub">Live values from <span class="mono">GET /health</span>. State is never hardcoded.</p></div>
-          <button class="btn btn-secondary btn-sm" id="refreshHealthBtn"><span>Refresh status</span></button>
-        </div>
-        <div class="stat-grid" id="statusGrid">
-          <article class="card stat-card"><div class="stat-top"><span class="stat-label">API status</span><span class="dot" id="dotApi"></span></div><div class="stat-value small" id="valApi">—</div><p class="stat-hint" id="hintApi">Awaiting /health.</p></article>
-          <article class="card stat-card"><div class="stat-top"><span class="stat-label">Model status</span><span class="dot" id="dotModel"></span></div><div class="stat-value small" id="valModel">—</div><p class="stat-hint">Champion weights.</p></article>
-          <article class="card stat-card"><div class="stat-top"><span class="stat-label">Inference service</span><span class="dot" id="dotInfer"></span></div><div class="stat-value small" id="valInfer">—</div><p class="stat-hint">POST /analyze readiness.</p></article>
-          <article class="card stat-card"><div class="stat-top"><span class="stat-label">Input size</span></div><div class="stat-value small mono" id="valInput">—</div><p class="stat-hint">Expected model input.</p></article>
-        </div>
-        <article class="card">
-          <h2 class="card-title">Service details</h2>
-          <dl class="kv big">
-            <div><dt>Service</dt><dd class="mono" id="detService">—</dd></div>
-            <div><dt>Model version</dt><dd class="mono" id="detVersion">—</dd></div>
-            <div><dt>Supported classes</dt><dd id="detClasses">—</dd></div>
-            <div><dt>Last checked</dt><dd class="mono" id="detChecked">—</dd></div>
-          </dl>
-          <pre class="code" id="healthRaw" aria-label="Raw health response">—</pre>
+        <article class="card" style="margin-top:1.2rem">
+          <p class="tech-label">GET /validation · frozen benchmarks</p>
+          <h2 class="card-title" style="font-size:1.3rem;margin:.4rem 0">Model validation</h2>
+          <p class="card-sub">Laboratory benchmark metrics — not clinical approval, not a claim about deployment behavior.</p>
+          <div class="val-grid" id="valGrid"><p class="fine-print">Loading validation metrics…</p></div>
         </article>
-      </section>
 
-      <!-- ======== SETTINGS ======== -->
-      <section class="view" id="view-settings" aria-labelledby="settingsTitle" hidden>
-        <div class="page-head"><div><h1 id="settingsTitle">Settings</h1><p class="page-sub">Local display preferences. No backend or model behaviour is changed.</p></div></div>
-        <div class="two-col">
-          <article class="card">
-            <h2 class="card-title">Display</h2>
-            <label class="setting-row"><div><strong>Reduce motion</strong><p>Minimise animations and transitions.</p></div><input type="checkbox" id="setMotion" class="switch"></label>
-            <label class="setting-row"><div><strong>Compact tables</strong><p>Denser history rows.</p></div><input type="checkbox" id="setCompact" class="switch"></label>
-            <label class="setting-row"><div><strong>Confirm before new analysis</strong><p>Ask before discarding a result.</p></div><input type="checkbox" id="setConfirm" class="switch"></label>
-          </article>
-          <article class="card">
-            <h2 class="card-title">About this workspace</h2>
-            <p class="card-sub">RetinaGuard is a screening-assistance demo. Image-quality assessment is advisory. Predictions require professional clinical review and are not a medical diagnosis.</p>
-            <div class="chip-row"><span class="meta-chip">SIH-ready demo</span><span class="meta-chip">Rural / PHC workflow</span><span class="meta-chip">No patient data stored</span></div>
-          </article>
+        <article class="card" style="margin-top:1.2rem">
+          <p class="tech-label">GET /simulink-stats · district telemedicine model</p>
+          <h2 class="card-title" style="font-size:1.3rem;margin:.4rem 0">Telemedicine at scale</h2>
+          <p class="card-sub">District-level screening simulation (100,000+ patients/year). Values served live by the backend.</p>
+          <div class="val-grid" id="simGrid"><p class="fine-print">Loading telemedicine telemetry…</p></div>
+        </article>
+
+        <div class="safety" role="note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          <p><strong>Screening support only.</strong> Image-quality assessment is advisory and not clinically validated. All screening results require review by a qualified healthcare professional.</p>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <footer class="foot">
-        <p>RetinaGuard · Screening support only — not a medical diagnosis · Professional clinical review required · Image-quality assessment is advisory.</p>
-      </footer>
-    </main>
   </div>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap">
+      <span><strong style="color:var(--text)">RETINAGUARD</strong> · Explainable AI retinal screening · Screening support only — not a medical diagnosis.</span>
+      <span class="mono" id="footModel">B0_CLASSWEIGHTED_FINETUNED_224</span>
+    </div>
+  </footer>
 </div>
 
 <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="false"></div>
-
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
