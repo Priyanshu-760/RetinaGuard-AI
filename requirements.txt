@@ -6,3 +6,4 @@ flask           # web API (/, /health, /analyze, /report, /feedback, /validation
 matplotlib      # Grad-CAM JET colormap rendering (app.py)
 reportlab       # vector PDF clinical report generation (services/pdf_report.py)
 pandas          # offline validation scripts (optional at runtime)
+gunicorn
