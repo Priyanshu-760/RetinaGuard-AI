@@ -1,5 +1,5 @@
 # RetinaGuard runtime (Python 3.10, Windows). Install: pip install -r requirements.txt
-tensorflow      # grading + UNet inference + Grad-CAM (app.py)
+tensorflow-cpu      # grading + UNet inference + Grad-CAM (app.py)
 numpy           # image math, masks, overlays
 Pillow          # image IO, enhancement, quality blur metric
 flask           # web API (/, /health, /analyze, /report, /feedback, /validation)
