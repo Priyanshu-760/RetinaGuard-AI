@@ -5,7 +5,7 @@
   var CLASS_ORDER = ['No DR', 'Mild', 'Moderate', 'Severe', 'Proliferative'];
   var VIEW_TITLES = {
     overview: 'Overview', screening: 'New Screening', history: 'Screening History',
-    insights: 'AI Insights', model: 'Model Information', status: 'System Status', settings: 'Settings'
+    insights: 'AI Insights', simulink: 'Simulink Telemedicine', model: 'Model Information', status: 'System Status', settings: 'Settings'
   };
 
   var state = {
@@ -522,10 +522,67 @@
       b.classList.toggle('is-active', on);
       b.setAttribute('aria-selected', on ? 'true' : 'false');
     });
+    var img = $('resultImage');
     var notice = $('viewerNotice');
-    var show = tab !== 'original';
-    if (notice) notice.classList.toggle('hidden', !show);
-    if (show) toast('Only Grad-CAM metadata is available — no heatmap is rendered.', 'info');
+    if (!img || !state.result) return;
+
+    var g = state.result.gradcam || {};
+    var s = state.result.structures || {};
+    var l = state.result.lesions || {};
+
+    var targetSrc = state.fileURL;
+    var noteMsg = '';
+
+    if (tab === 'attention' && g.heatmap_png_base64) {
+      targetSrc = 'data:image/png;base64,' + g.heatmap_png_base64;
+      noteMsg = 'Grad-CAM Attention Heatmap (JET Colormap)';
+    } else if (tab === 'overlay' && g.overlay_png_base64) {
+      targetSrc = 'data:image/png;base64,' + g.overlay_png_base64;
+      noteMsg = 'Grad-CAM Heatmap Overlay (Blended Fundus + Attention)';
+    } else if (tab === 'vessel' && s.vessel_png_base64) {
+      targetSrc = 'data:image/png;base64,' + s.vessel_png_base64;
+      noteMsg = 'Retinal Vessel Segmentation Mask (DRIVE UNet / Proxy)';
+    } else if (tab === 'exudate' && l.exudate_png_base64) {
+      targetSrc = 'data:image/png;base64,' + l.exudate_png_base64;
+      noteMsg = 'Exudate Lesion Segmentation Mask (IDRiD UNet / Proxy)';
+    } else {
+      targetSrc = state.fileURL;
+      noteMsg = 'Original fundus image';
+    }
+
+    img.src = targetSrc;
+    if (notice) notice.classList.add('hidden');
+    if (noteMsg) toast(noteMsg, 'info');
+  }
+
+  function downloadPdfReport() {
+    toast('Generating vector PDF clinical report...', 'info');
+    if (state.file) {
+      var fd = new FormData();
+      fd.append('image', state.file);
+      fetch('/download-pdf-report', { method: 'POST', body: fd })
+        .then(function (res) {
+          if (!res.ok) throw new Error('PDF generation failed');
+          return res.blob();
+        })
+        .then(function (blob) {
+          var u = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = u;
+          a.download = 'RetinaGuard_Clinical_Screening_Report.pdf';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(function() { URL.revokeObjectURL(u); }, 2000);
+          toast('PDF report downloaded successfully.', 'success');
+        })
+        .catch(function (e) {
+          toast('Error generating PDF: ' + e.message, 'error');
+        });
+    } else {
+      window.open('/download-pdf-report-sample', '_blank');
+      toast('Sample PDF report downloaded.', 'success');
+    }
   }
 
   /* ---------- Goto buttons / drawer ---------- */
@@ -596,9 +653,18 @@
     });
     $('copySummaryBtn').addEventListener('click', copySummary);
 
+    var btnPdf = $('downloadPdfBtn');
+    if (btnPdf) btnPdf.addEventListener('click', downloadPdfReport);
+    var btnPdfHeader = $('downloadPdfBtnHeader');
+    if (btnPdfHeader) btnPdfHeader.addEventListener('click', downloadPdfReport);
+
     document.querySelectorAll('[data-imgtab]').forEach(function (b) {
       b.addEventListener('click', function () { setImgTab(b.dataset.imgtab); });
     });
+    $('fitBtn').addEventListener('click', function () { state.zoom = 1; applyZoom(); });
+    $('zoomInBtn').addEventListener('click', function () { state.zoom = Math.min(3, state.zoom + 0.25); applyZoom(); });
+    $('zoomOutBtn').addEventListener('click', function () { state.zoom = Math.max(0.5, state.zoom - 0.25); applyZoom(); });
+    $('resetZoomBtn').addEventListener('click', function () { state.zoom = 1; applyZoom(); });
     $('fitBtn').addEventListener('click', function () { state.zoom = 1; applyZoom(); });
     $('zoomInBtn').addEventListener('click', function () { state.zoom = Math.min(3, state.zoom + 0.25); applyZoom(); });
     $('zoomOutBtn').addEventListener('click', function () { state.zoom = Math.max(0.5, state.zoom - 0.25); applyZoom(); });

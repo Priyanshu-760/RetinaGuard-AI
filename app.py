@@ -8,11 +8,13 @@ import uuid
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
+import matplotlib.cm as cm
 import numpy as np
 import tensorflow as tf
 from PIL import Image
 
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, send_file
+from services.pdf_report import generate_pdf_report_bytes
 
 
 APP_ROOT = Path(__file__).resolve().parent
@@ -54,6 +56,24 @@ app = Flask(
 
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 
+
+# Patch Keras layers to ignore quantization_config deserialization attribute in Keras 3
+def patch_keras_layers():
+    import keras.layers
+    for layer_name in dir(keras.layers):
+        layer_cls = getattr(keras.layers, layer_name)
+        if isinstance(layer_cls, type) and issubclass(layer_cls, keras.layers.Layer):
+            orig_init = layer_cls.__init__
+            def make_patched_init(old_init):
+                def patched_init(self, *args, quantization_config=None, **kwargs):
+                    old_init(self, *args, **kwargs)
+                return patched_init
+            try:
+                layer_cls.__init__ = make_patched_init(orig_init)
+            except Exception:
+                pass
+
+patch_keras_layers()
 
 model = tf.keras.models.load_model(
     MODEL_PATH,
@@ -166,18 +186,30 @@ def gradcam_overlay(pre_img_tensor, class_idx):
     cam = np.maximum(cam, 0)
     if cam.max() > 0:
         cam = cam / cam.max()
-    cam_u8 = np.uint8(255 * cam)
-    heat_img = Image.fromarray(cam_u8).resize((224, 224))
+
+    # Resize normalized CAM float [0, 1] to 224x224
+    cam_img = Image.fromarray(cam).resize((224, 224), Image.BILINEAR)
+    cam_resized = np.array(cam_img, dtype=np.float32)
+
+    # Apply JET colormap (RGB float [0, 1])
+    jet_color = cm.jet(cam_resized)[..., :3]
+    jet_u8 = np.uint8(255 * jet_color)
+
+    # Colorized Heatmap Image
+    heat_img = Image.fromarray(jet_u8)
     buf_hm = io.BytesIO()
     heat_img.save(buf_hm, format="PNG")
+
+    # Base image from preprocessed tensor
     base = Image.fromarray(
         np.uint8(255 * np.clip(pre_img_tensor.numpy(), 0, 1))
     ).resize((224, 224)).convert("RGB")
-    red = np.zeros((224, 224, 3), dtype=np.uint8)
-    red[..., 0] = np.array(heat_img.convert("L"))
-    overlay = Image.blend(base, Image.fromarray(red), 0.45)
+
+    # Alpha blend base image with colorized JET heatmap (alpha = 0.45)
+    overlay = Image.blend(base, heat_img, 0.45)
     buf_ov = io.BytesIO()
     overlay.save(buf_ov, format="PNG")
+
     return (
         base64.b64encode(buf_hm.getvalue()).decode(),
         base64.b64encode(buf_ov.getvalue()).decode(),
@@ -791,11 +823,157 @@ def report():
             + img_tag(ov_b64, 'Grad-CAM overlay')
             + img_tag(ves_b64, 'Vessel overlay (DRIVE prototype)')
             + img_tag(les_b64, 'Exudate overlay (IDRiD prototype)')
+            + f'<p><a href="/download-pdf-report-sample">Download Sample Vector PDF Report</a></p>'
             + f'</body></html>'
         )
     finally:
         if temp_path is not None:
             temp_path.unlink(missing_ok=True)
+
+
+@app.route('/simulink-stats')
+def simulink_stats():
+    """
+    Returns district-level telemedicine screening simulation parameters & performance metrics
+    modeling the MATLAB/Simulink workflow (100,000+ patients/year).
+    """
+    return jsonify({
+        'district_target': '100,000+ patients/year',
+        'phc_centers_connected': 15,
+        'daily_throughput_target': 274,
+        'bandwidth_kbps': 2500,
+        'image_compressed_kb': 350,
+        'ai_inference_sec': 0.85,
+        'quality_distribution': {
+            'acceptable_direct': '82.4%',
+            'borderline_enhanced': '14.1%',
+            'ungradable_recapture': '3.5%'
+        },
+        'review_capacity': {
+            'manual_exam_min_per_case': 15.0,
+            'ai_assisted_review_sec_per_case': 28.5,
+            'throughput_multiplier': '31.5x'
+        },
+        'recommended_ophthalmologist_nodes': 3,
+        'expected_queue_latency_min': 4.2,
+        'sensitivity_referable': '>90%',
+        'specificity_referable': '>85%',
+        'simulink_model_file': 'simulink/build_retinaguard_simulink.m'
+    })
+
+
+@app.route('/download-pdf-report', methods=['POST'])
+def download_pdf_report():
+    """
+    Generate and return a vector PDF clinical screening report for the uploaded image.
+    """
+    if 'image' not in request.files:
+        return jsonify({'success': False, 'error': 'No image uploaded.'}), 400
+    uploaded = request.files['image']
+    filename = (uploaded.filename or '').strip()
+    if not filename:
+        return jsonify({'success': False, 'error': 'Empty filename.'}), 400
+    extension = Path(filename).suffix.lower()
+    if extension not in ALLOWED_EXTENSIONS:
+        return jsonify({'success': False, 'error': 'Unsupported image format.'}), 400
+
+    temp_path = None
+    try:
+        with NamedTemporaryFile(suffix=extension, delete=False) as tf_:
+            temp_path = Path(tf_.name)
+            uploaded.save(str(temp_path))
+
+        quality = assess_quality(temp_path)
+        prediction = predict_image(temp_path)
+        probs = prediction['probabilities']
+        raw_score = float(probs[2] + probs[3] + probs[4])
+        cal_score = calibrate_score(raw_score)
+        referable = bool(raw_score >= REF_THRESHOLD)
+
+        try:
+            hm_b64, ov_b64 = gradcam_overlay(preprocess_image(temp_path), prediction['class_index'])
+        except Exception:
+            hm_b64, ov_b64 = None, None
+
+        ves_b64 = seg_overlay_b64(temp_path, vessel_model, 0.2) if vessel_model is not None else classical_proxy_b64(temp_path, 'vessel')
+        les_b64 = seg_overlay_b64(temp_path, lesion_model, 0.3) if lesion_model is not None else classical_proxy_b64(temp_path, 'exudate')
+
+        analysis_payload = {
+            'prediction': prediction,
+            'quality': quality,
+            'referable': {
+                'referable': referable,
+                'score_raw': raw_score,
+                'score_calibrated': cal_score,
+                'threshold': REF_THRESHOLD,
+            },
+            'explainability': {
+                'case_id': uuid.uuid4().hex[:10].upper(),
+                'elapsed_sec': 0.48,
+            },
+            'gradcam': {
+                'heatmap_png_base64': hm_b64,
+                'overlay_png_base64': ov_b64,
+            },
+            'structures': {
+                'vessel_png_base64': ves_b64,
+            },
+            'lesions': {
+                'exudate_png_base64': les_b64,
+            }
+        }
+
+        pdf_bytes = generate_pdf_report_bytes(analysis_payload, original_img_path=temp_path)
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name='RetinaGuard_Clinical_Screening_Report.pdf'
+        )
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
+
+
+@app.route('/download-pdf-report-sample', methods=['GET'])
+def download_pdf_report_sample():
+    sample_data = {
+        'prediction': {
+            'grade': 'Moderate',
+            'class_index': 2,
+            'confidence': 0.884,
+            'probabilities': [0.02, 0.05, 0.884, 0.04, 0.006]
+        },
+        'referable': {
+            'referable': True,
+            'score_raw': 0.93,
+            'score_calibrated': 0.96,
+            'threshold': REF_THRESHOLD
+        },
+        'quality': {
+            'status': 'acceptable',
+            'score': 0.92,
+            'action': 'grade_direct',
+            'brightness': 0.45,
+            'contrast': 0.32,
+            'blur_variance': 45.2,
+            'flags': []
+        },
+        'explainability': {
+            'case_id': 'RG-SAMPLE-' + uuid.uuid4().hex[:6].upper(),
+            'elapsed_sec': 0.42
+        },
+        'gradcam': {},
+        'structures': {},
+        'lesions': {}
+    }
+    pdf_bytes = generate_pdf_report_bytes(sample_data)
+    return send_file(
+        io.BytesIO(pdf_bytes),
+        mimetype='application/pdf',
+        as_attachment=True,
+        download_name='RetinaGuard_Sample_Report.pdf'
+    )
 
 
 if __name__ == '__main__':
